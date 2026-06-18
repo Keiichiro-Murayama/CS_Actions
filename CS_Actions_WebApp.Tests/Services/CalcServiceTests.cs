@@ -28,5 +28,5 @@ public class CalcServiceTests
     {
         var service = new CalcService();
         service.Execute(10, 0, "/");
-    }      
+    }
 }

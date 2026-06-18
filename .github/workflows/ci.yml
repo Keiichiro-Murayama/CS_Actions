@@ -16,7 +16,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
+      - name: コードフォーマットの検証
+        run: dotnet format --verify-no-changes
       - name: プロジェクトのビルド
         run: dotnet build --configuration Release
         

@@ -16,7 +16,7 @@ public class CalcController : Controller
     public CalcController(CalcService calcService)
     {
         _calcService = calcService;
-    } 
+    }
 
     /// <summary>
     /// 計算機能の入力を表示するアクション
