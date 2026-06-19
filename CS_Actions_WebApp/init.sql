@@ -1,8 +1,8 @@
 -- 1. データベースの作成
-CREATE DATABASE "training-postgres-016";
+CREATE DATABASE "ActionsDB";
 
--- 2. 接続先データベースを training-postgres-016 に切り替える
-\c "training-postgres-016"
+-- 2. 接続先データベースを ActionsDB に切り替える
+\c "ActionsDB"
 
 -- 3. 研修向け：常にクリーンな状態にするため、既存のテーブルを削除
 DROP TABLE IF EXISTS product;
