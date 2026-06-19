@@ -16,20 +16,29 @@ jobs:
   deploy: # ジョブの識別名（任意の名前）
     # GitHub側が用意する使い捨ての仮想環境（Runner）のOSを指定
     runs-on: ubuntu-latest
-    
+
     # ジョブ内で順番に実行される手順（ステップ）のリスト
     steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: .NET SDK のセットアップ
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: アプリケーションのビルドと発行 (Publish)
+        # FDD形式、Linux向けに最適化して ./publish フォルダに出力
+        run: dotnet publish CS_Actions_WebApp/CS_Actions_WebApp.csproj -c Release -r linux-x64 --self-contained false -o ./publish
+
       - name: 運用環境へのSSH疎通確認
         # サードパーティ製（コミュニティ作成）のSSH接続アクションを利用
         uses: appleboy/ssh-action@v1.0.3
-        
-        # 上記のアクションに渡すパラメータ（引数）の定義
         with:
           # GitHub Secretsから認証情報を安全に取得し、環境に展開（注入）する
           host: ${{ secrets.ACTIONS_AZURE_HOST }}         # 接続先サーバーのIPアドレス
           username: ${{ secrets.ACTIONS_AZURE_USER }}     # ログインユーザー名（ubuntu）
           key: ${{ secrets.ACTIONS_AZURE_SECRET }}      # 秘密鍵（PEM）のテキストデータ
-          
           # SSH接続が成功した後に、リモートサーバー上で実行されるシェルコマンド
           # （「|」は複数行の文字列を記述するためのYAMLの記法）
           script: |
@@ -38,6 +47,7 @@ jobs:
             uname -a # サーバーのOSやカーネル情報を出力し、Linuxであることを確認
             echo "--- Current User ---"
             whoami   # 実行ユーザーを出力し、指定したユーザーでログインできたか確認
+
       - name: ASP.NET Core Runtime 8.0 のプロビジョニング
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -54,3 +64,28 @@ jobs:
             # 3. インストール結果の確認
             echo "--- Verifying Installation ---"
             dotnet --list-runtimes
+
+      - name: デプロイ先ディレクトリの準備
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ACTIONS_AZURE_HOST }}
+          username: ${{ secrets.ACTIONS_AZURE_USER }}
+          key: ${{ secrets.ACTIONS_AZURE_SECRET }}
+          script: |
+            echo "--- Preparing Deployment Directory ---"
+            # 配置用ディレクトリの作成
+            sudo mkdir -p /var/www/myapp
+            # azureuserユーザーに所有権を変更（SCPでの書き込み許可のため）
+            sudo chown -R $(whoami):$(whoami) /var/www/myapp
+            # 前回デプロイ時の古いファイルを削除（冪等性の担保）
+            rm -rf /var/www/myapp/*
+
+      - name: SCPによるアーティファクトの転送
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.ACTIONS_AZURE_HOST }}
+          username: ${{ secrets.ACTIONS_AZURE_USER }}
+          key: ${{ secrets.ACTIONS_AZURE_SECRET }}
+          source: "./publish/*"       # 送信元（Runner上で生成した全ファイル）
+          target: "/var/www/myapp/"   # 送信先（VM上の配置ディレクトリ）
+          strip_components: 1         # 転送先に「publish」という親フォルダを作らず中身だけを展開
