@@ -22,6 +22,7 @@ public class ProductController : Controller
     /// <summary>
     /// 商品一覧画面を表示する (GET: /Product)
     /// </summary>
+    [HttpGet("Product")]
     public async Task<IActionResult> Index()
     {
         // Serviceを呼び出して商品一覧を非同期で取得
